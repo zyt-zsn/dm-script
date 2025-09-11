@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+#
+# Script name: dm-help
+# Description: List all tldr pages with preview, and show man page of selected cmd.
+# Dependencies: fzf, tldr, tree, jq, less, man
+# GitLab: https://www.gitlab.com/dwt1/dmscripts
+# License: https://www.gitlab.com/dwt1/dmscripts/LICENSE
+# Contributors: ZYT
+#               Derek Taylor
+#
+### HELP FOR TLDR CONFIG
+# downloaded tldr pages directory: ~/.local/share/tldr/
+
+# Set with the flags "-e", "-u","-o pipefail" cause the script to fail
+# if certain things happen, which is a good thing.  Otherwise, we can
+# get hidden bugs that are hard to discover.
+set -euo pipefail
+
+# shellcheck disable=SC1091
+source ./_dm-helper.sh 2>/dev/null || source _dm-helper.sh 2>/dev/null
+source ~/zyt-helper.sh 2>/dev/null
+source_dmscripts_configs
+
+# jq .commands[].name -r index.json
+export TLDR_DB_DIR=~/.local/share/tldr
+export TLDR_INDEX_JSON=${TLDR_DB_DIR}/index.json
+function list_commands(){
+	jq '.commands[]|.name+":"+.platform[]' -r $TLDR_INDEX_JSON
+}
+
+#List property(designated by $2) of cmd designated by $1
+function list_cmd_property(){
+	jq --arg name "$1" --arg prop "$2" '.commands[]|select(.name==$name)|.[$prop].[]' -r $TLDR_INDEX_JSON
+}
+export -f list_cmd_property
+#List supported languages of cmd designated by $1
+function list_cmd_languages(){
+	# jq --arg name "$1" '.commands[]|select(.name==$name)|.language.[]' -r $TLDR_INDEX_JSON
+	list_cmd_property "$1" "language"
+}
+export -f list_cmd_languages
+function list_help_topics(){
+	list_commands
+}
+
+main() {
+	# list_commands && exit 0
+	# list_cmd_languages $(echo -n "$(list_commands)" | fzf -e) 
+	# list_cmd_property "[[" "platform"
+	# exit 0
+	while getopts "dfrh" arg 2>/dev/null; do
+		:	
+	done
+	shift $((OPTIND - 1))
+	set +u
+	[[ -n $1 ]] && init_query=$1 || init_query=""
+	set -u
+	choice=$(echo -n "$(list_help_topics)"\
+				 | fzf --query="$init_query" \
+					   --delimiter :\
+					   --with-nth '{2}   {1}'\
+					   --accept-nth='{1}'\
+					   --style full\
+					   --bind 'focus:transform-preview-label(list_cmd_property {} "platform")'\
+					   --preview='command tldr -L zh {1}') || exit 1
+	set +e
+	if whatis "$choice" > /dev/null 2>&1;then
+		man "$choice"
+	elif command help -m "$choice" > /dev/null 2>&1; then
+		command help -m "$choice"|less
+	else
+		:
+	fi
+}
+
+# # If script is run with NO argument, it will use 'dmenu'
+# [ $no_opt = 1 ] && MENU=${DMENU} && [[ "${BASH_SOURCE[0]}" == "${0}" ]] && main "$@"
+
+MENU="$(get_menu_program "$@")"
+[[ "${BASH_SOURCE[0]}" == "${0}" ]] && main "$@"
+
+
+
+# man -k . | fzf -e --preview 'man -f {1}' --accept-nth 1 | xargs man
