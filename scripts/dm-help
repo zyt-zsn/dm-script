@@ -24,10 +24,18 @@ source_dmscripts_configs
 # jq .commands[].name -r index.json
 export TLDR_DB_DIR=~/.local/share/tldr
 export TLDR_INDEX_JSON=${TLDR_DB_DIR}/index.json
-function list_commands(){
-	jq '.commands[]|.name+":"+.platform[]' -r $TLDR_INDEX_JSON
+function list_tldr(){
+	jq '.commands[]|"tldr:"+.platform[]+":"+.name' -r $TLDR_INDEX_JSON
 }
-
+function list_man_pages(){
+	man -k . | awk '{print "man:linux:"$0}'
+}
+function list_info(){
+	info -k . | awk '{print "info:linux:"$0}'
+}
+function list_builtin_commands(){
+	help -d | awk '{ RS = "\n\n" ;} NR>2 {print $0}'
+}
 #List property(designated by $2) of cmd designated by $1
 function list_cmd_property(){
 	jq --arg name "$1" --arg prop "$2" '.commands[]|select(.name==$name)|.[$prop].[]' -r $TLDR_INDEX_JSON
@@ -40,9 +48,35 @@ function list_cmd_languages(){
 }
 export -f list_cmd_languages
 function list_help_topics(){
-	list_commands
+	echo -e "$(list_tldr)\n$(list_man_pages)\n$(list_info)"
 }
 
+#Param1: tldr/man/help
+#Param2: platform: linux/windows/..
+#Param3: topic
+function preview_topic(){
+	case "$1" in
+		tldr)
+			command tldr --platform "$2" "$3" | less;;
+		man)
+			# local topic=$(echo "$3" | awk '{print $1}')
+			eval $(echo "$3" | awk -F '( \\()|)' '{print "local topic=\"" $1 "\"; local section=\"" $2 "\""}')
+			# man "$section" "$topic" ;;
+			# echo section $section ;;
+			info "$topic.$section" ;;
+		info)
+			eval $(echo "$3" | awk -F '--' '{print "local topic=" $1 ";\n local node=\"" $2 "\";"}')
+			# eval $(echo "$3" | awk -F '--' '{print "local topic=" $1}')
+			# eval $(echo "$3" | awk -F '--' '{print "local node=\"" $2 "\""}')
+			# echo topic:$topic node: $node ;;
+			set +o pipefail
+			info "$topic" ;;
+		*)
+			help -m "$topic" | less ;;
+	esac
+	# command "$1" $(echo "$3" | awk '{print $1}')
+}
+export -f preview_topic
 main() {
 	# list_commands && exit 0
 	# list_cmd_languages $(echo -n "$(list_commands)" | fzf -e) 
@@ -58,11 +92,14 @@ main() {
 	choice=$(echo -n "$(list_help_topics)"\
 				 | fzf --query="$init_query" \
 					   --delimiter :\
-					   --with-nth '{2}   {1}'\
-					   --accept-nth='{1}'\
+					   --exact\
+					   --sort\
+					   --with-nth '{1} {2} {3}'\
+					   --accept-nth='{3}'\
 					   --style full\
 					   --bind 'focus:transform-preview-label(list_cmd_property {} "platform")'\
-					   --preview='command tldr -L zh {1}') || exit 1
+					   --bind "enter:execute(preview_topic {1} {2} {3})"\
+					   --preview='preview_topic {1} {2} {3}') || exit 1
 	set +e
 	if whatis "$choice" > /dev/null 2>&1;then
 		man "$choice"
