@@ -25,13 +25,13 @@ source_dmscripts_configs
 export TLDR_DB_DIR=~/.local/share/tldr
 export TLDR_INDEX_JSON=${TLDR_DB_DIR}/index.json
 function list_tldr(){
-	jq '.commands[]|"tldr:"+.platform[]+":"+.name' -r $TLDR_INDEX_JSON
+	jq '.commands[]|"tldr#"+.platform[]+"#"+.name' -r $TLDR_INDEX_JSON
 }
 function list_man_pages(){
-	man -k . | awk '{print "man:linux:"$0}'
+	man -k . | awk '{print "man#linux#"$0}'
 }
 function list_info(){
-	info -k . | awk '{print "info:linux:"$0}'
+	info -k . | awk '{print "info#linux#"$0}'
 }
 function list_builtin_commands(){
 	help -d | awk '{ RS = "\n\n" ;} NR>2 {print $0}'
@@ -62,14 +62,14 @@ function preview_topic(){
 			# local topic=$(echo "$3" | awk '{print $1}')
 			eval $(echo "$3" | awk -F '( \\()|)' '{print "local topic=\"" $1 "\"; local section=\"" $2 "\""}')
 			# man "$section" "$topic" ;;
-			# echo section $section ;;
+			# echo section "$section"
+			# echo $section $topic ;;
 			info "$topic.$section" ;;
 		info)
 			eval $(echo "$3" | awk -F '--' '{print "local topic=" $1 ";\n local node=\"" $2 "\";"}')
 			# eval $(echo "$3" | awk -F '--' '{print "local topic=" $1}')
 			# eval $(echo "$3" | awk -F '--' '{print "local node=\"" $2 "\""}')
 			# echo topic:$topic node: $node ;;
-			set +o pipefail
 			info "$topic" ;;
 		*)
 			help -m "$topic" | less ;;
@@ -91,7 +91,7 @@ main() {
 	set -u
 	choice=$(echo -n "$(list_help_topics)"\
 				 | fzf --query="$init_query" \
-					   --delimiter :\
+					   --delimiter '#'\
 					   --exact\
 					   --sort\
 					   --with-nth '{1} {2} {3}'\
