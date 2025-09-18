@@ -18,12 +18,15 @@ set -euo pipefail
 
 # shellcheck disable=SC1091
 source ./_dm-helper.sh 2>/dev/null || source _dm-helper.sh 2>/dev/null
-source ~/zyt-helper.sh 2>/dev/null
+# source /home/zyt/zyt-helper.sh 2>/dev/null
 source_dmscripts_configs
 
 # jq .commands[].name -r index.json
 export TLDR_DB_DIR=~/.local/share/tldr
 export TLDR_INDEX_JSON=${TLDR_DB_DIR}/index.json
+export HELP_HUB_RUN_DIR=/run/user/1000/help_hub
+[[ -d "$HELP_HUB_RUN_DIR" ]] || mkdir -p "$HELP_HUB_RUN_DIR" 
+
 function list_tldr(){
 	jq '.commands[]|"tldr#"+.platform[]+"#"+.name' -r $TLDR_INDEX_JSON
 }
@@ -48,7 +51,11 @@ function list_cmd_languages(){
 }
 export -f list_cmd_languages
 function list_help_topics(){
-	echo -e "$(list_tldr)\n$(list_man_pages)\n$(list_info)"
+	if [[ -f "$HELP_HUB_RUN_DIR"/topics ]]; then
+		cat "$HELP_HUB_RUN_DIR"/topics
+	else
+		echo -e "$(list_tldr)\n$(list_man_pages)\n$(list_info)" | tee "$HELP_HUB_RUN_DIR"/topics
+	fi
 }
 
 #Param1: tldr/man/help
