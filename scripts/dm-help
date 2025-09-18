@@ -61,29 +61,39 @@ function list_help_topics(){
 #Param1: tldr/man/help
 #Param2: platform: linux/windows/..
 #Param3: topic
-function preview_topic(){
+function display_topic(){
 	case "$1" in
 		tldr)
-			command tldr --platform "$2" "$3" | less;;
+			if [ "$4" == preview ] ; then
+				command tldr --platform "$2" "$3" | less
+			else
+				if info "$3" &>/dev/null;then
+					info "$3"
+				elif man "$3" &>/dev/null;then
+					man "$3"
+				else
+					command tldr --platform "$2" "$3" | less
+				fi
+			fi
+			;;
 		man)
-			# local topic=$(echo "$3" | awk '{print $1}')
 			eval $(echo "$3" | awk -F '( \\()|)' '{print "local topic=\"" $1 "\"; local section=\"" $2 "\""}')
-			# man "$section" "$topic" ;;
-			# echo section "$section"
-			# echo $section $topic ;;
-			info "$topic.$section" ;;
+			if [ "$4" == preview ] ; then
+				man "$section" "$topic";
+			else
+				info -a "$topic.$section";
+			fi
+			;;
 		info)
 			eval $(echo "$3" | awk -F '--' '{print "local topic=" $1 ";\n local node=\"" $2 "\";"}')
-			# eval $(echo "$3" | awk -F '--' '{print "local topic=" $1}')
-			# eval $(echo "$3" | awk -F '--' '{print "local node=\"" $2 "\""}')
-			# echo topic:$topic node: $node ;;
-			info "$topic" ;;
+			info "$topic"
+			;;
 		*)
 			help -m "$topic" | less ;;
 	esac
 	# command "$1" $(echo "$3" | awk '{print $1}')
 }
-export -f preview_topic
+export -f display_topic
 main() {
 	# list_commands && exit 0
 	# list_cmd_languages $(echo -n "$(list_commands)" | fzf -e) 
@@ -105,8 +115,8 @@ main() {
 					   --accept-nth='{3}'\
 					   --style full\
 					   --bind 'focus:transform-preview-label(list_cmd_property {} "platform")'\
-					   --bind "enter:execute(preview_topic {1} {2} {3})"\
-					   --preview='preview_topic {1} {2} {3}') || exit 1
+					   --bind "enter:execute(display_topic {1} {2} {3} view)"\
+					   --preview='display_topic {1} {2} {3} preview') || exit 1
 	set +e
 	if whatis "$choice" > /dev/null 2>&1;then
 		man "$choice"
