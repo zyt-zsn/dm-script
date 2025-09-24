@@ -37,7 +37,7 @@ function list_info(){
 	info -k . | awk '{print "info#linux#"$0}'
 }
 function list_builtin_commands(){
-	help -d | awk '{ RS = "\n\n" ;} NR>2 {print $0}'
+	bash -c help -d | awk -F '  ' '/^ / {printf "builtin#bash#%s\nbuiltin#bash#%s\n", gensub(/ +.*/, "", "g", gensub(/^ */, "", 1,$1)), gensub(/ +.*/, "", "g", gensub(/^ */, "", 1,$NF))}'
 }
 #List property(designated by $2) of cmd designated by $1
 function list_cmd_property(){
@@ -54,7 +54,7 @@ function list_help_topics(){
 	if [[ -f "$HELP_HUB_RUN_DIR"/topics ]]; then
 		cat "$HELP_HUB_RUN_DIR"/topics
 	else
-		echo -e "$(list_tldr)\n$(list_man_pages)\n$(list_info)" | tee "$HELP_HUB_RUN_DIR"/topics
+		echo -e "$(list_tldr)\n$(list_man_pages)\n$(list_info)\n$(list_builtin_commands)" | tee "$HELP_HUB_RUN_DIR"/topics
 	fi
 }
 
@@ -63,6 +63,11 @@ function list_help_topics(){
 #Param3: topic
 function display_topic(){
 	case "$1" in
+		builtin)
+			local topic
+			topic=$(echo "$3"|awk '{print $1}')
+			help -m "$topic" | less
+			;;
 		tldr)
 			if [ "$4" == preview ] ; then
 				command tldr --platform "$2" "$3" | less
