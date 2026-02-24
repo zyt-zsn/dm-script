@@ -73,33 +73,44 @@ function display_topic(){
 				command tldr --platform "$2" "$3" | less
 			else
 				if info "$3" &>/dev/null;then
-					info "$3"
+					pinfo "$3"
 				elif man "$3" &>/dev/null;then
-					man "$3"
+					local expression="(man \"$3\")"
+					emacsclient.sh -e "$expression" || man "$3"
 				else
 					command tldr --platform "$2" "$3" | less
 				fi
 			fi
 			;;
 		man)
+			# shellcheck disable=SC2046
 			eval $(echo "$3" | awk -F '( \\()|)' '{print "local topic=\"" $1 "\"; local section=\"" $2 "\""}')
 			if [ "$4" == preview ] ; then
+				#shellcheck disable=SC2154
 				man "$section" "$topic";
 			else
-				info -a "$topic.$section";
+				local expression="(man \"$section $topic\")"
+				emacsclient.sh -e "$expression" || pinfo -a "$topic.$section";
 			fi
 			;;
 		info)
+			# shellcheck disable=SC2046
 			eval $(echo "$3" | awk -F '--' '{print "local topic=" $1 ";\n local node=\"" $2 "\";"}')
-			info "$topic"
+			if [ "$4" == preview ] ; then
+				info "$topic"
+			else
+				local expression="(info \"$topic\")"
+				emacsclient.sh -e "$expression" || pinfo "$topic"
+			fi
 			;;
 		*)
 			help -m "$topic" | less ;;
 	esac
 	# command "$1" $(echo "$3" | awk '{print $1}')
 }
+
 export -f display_topic
-main() {
+main(){
 	# list_commands && exit 0
 	# list_cmd_languages $(echo -n "$(list_commands)" | fzf -e) 
 	# list_cmd_property "[[" "platform"
@@ -117,20 +128,26 @@ main() {
 					   --exact\
 					   --sort\
 					   --with-nth '{1} {2} {3}'\
-					   --accept-nth='{3}'\
+					   --accept-nth='{1,2,3}'\
 					   --style full\
 					   --bind 'focus:transform-preview-label(list_cmd_property {} "platform")'\
-					   --bind "enter:execute(display_topic {1} {2} {3} view)"\
+					   --bind "space:execute(display_topic {1} {2} {3} view)"\
 					   --preview='display_topic {1} {2} {3} preview') || exit 1
 	set +e
-	if whatis "$choice" > /dev/null 2>&1;then
-		man "$choice"
-	elif command help -m "$choice" > /dev/null 2>&1; then
-		command help -m "$choice"|less
-	else
-		:
-	fi
+	# shellcheck disable=SC2086
+	# display_topic $(echo "$choice" | sed 's/#/ /g') view 
+	# display_topic $(echo "${choice//#/ }") view
+	display_topic ${choice//#/ } view
+
+	# if whatis "$choice" > /dev/null 2>&1;then
+	# 	man "$choice"
+	# elif command help -m "$choice" > /dev/null 2>&1; then
+	# 	command help -m "$choice"|less
+	# else
+	# 	:
+	# fi
 }
+# shellcheck enable=quote-safe-variables
 
 # # If script is run with NO argument, it will use 'dmenu'
 # [ $no_opt = 1 ] && MENU=${DMENU} && [[ "${BASH_SOURCE[0]}" == "${0}" ]] && main "$@"
