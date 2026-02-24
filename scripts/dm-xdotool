@@ -1,0 +1,5 @@
+#!/usr/bin/xdotool
+
+windowactivate $1
+windowmove $1 0% 0%
+windowsize $1 100% 100%

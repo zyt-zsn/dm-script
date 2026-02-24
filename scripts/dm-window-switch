@@ -1,0 +1,5 @@
+#!/usr/bin/bash
+
+# alacritty -e wmctrl -a $(wmctrl -l | fzf --accept-nth=4)
+dm-xdotool "$(wmctrl -l -x | awk '$3 !~ /floating-term/' | fzf --with-nth=3,5 --accept-nth=1 --layout=reverse --style=full --prompt 'Switch to: ')"
+# xdotool getactivewindow windowsize 100% 100% windowmove 1 1
