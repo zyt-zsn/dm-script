@@ -97,16 +97,17 @@ function display_topic(){
 			;;
 		info)
 			# shellcheck disable=SC2046
-			eval $(echo "$3" | awk -F '--' '{print "local topic=" $1 ";\n local node=\"" $2 "\";"}')
-			if [ "$4" == preview ] ; then
-				info "$topic"
+			eval $(echo "${*:3: ${#*}-3}" | awk -F ' --' 'match($1, /\((.*)\)(.*)/, groups) {print "local info_file=" groups[1] ";\n local node=\"" groups[2] ";"}')
+			# shellcheck disable=SC2154
+			if [ "${*: ${#*}}" == preview ] ; then
+				info "($info_file)$node"
 			else
-				expression="(info \"$topic\")"
-				emacsclient.sh -e "$expression" || pinfo "$topic"
+				expression="(info \"\($info_file\)$node\")"
+				emacsclient.sh -e "$expression" || pinfo "$info_file"
 			fi
 			;;
 		*)
-			help -m "$topic" | less ;;
+			help -m "${*:3}" | less ;;
 	esac
 	# command "$1" $(echo "$3" | awk '{print $1}')
 }
