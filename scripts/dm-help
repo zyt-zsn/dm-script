@@ -131,14 +131,14 @@ main(){
 					   --accept-nth='{1,2,3}'\
 					   --style full\
 					   --bind 'focus:transform-preview-label(list_cmd_property {} "platform")'\
-					   --bind "space:execute(display_topic {1} {2} {3} view)"\
+					   --bind "tab:execute(display_topic {1} {2} {3} view)"\
 					   --preview='display_topic {1} {2} {3} preview') || exit 1
 	set +e
 	# shellcheck disable=SC2086
 	# display_topic $(echo "$choice" | sed 's/#/ /g') view 
 	# display_topic $(echo "${choice//#/ }") view
 	display_topic ${choice//#/ } view
-
+	wmctrl -a emacs
 	# if whatis "$choice" > /dev/null 2>&1;then
 	# 	man "$choice"
 	# elif command help -m "$choice" > /dev/null 2>&1; then
