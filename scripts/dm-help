@@ -62,6 +62,7 @@ function list_help_topics(){
 #Param2: platform: linux/windows/..
 #Param3: topic
 function display_topic(){
+	local expression
 	case "$1" in
 		builtin)
 			local topic
@@ -75,10 +76,11 @@ function display_topic(){
 				if info "$3" &>/dev/null;then
 					pinfo "$3"
 				elif man "$3" &>/dev/null;then
-					local expression="(progn (require 'man)(let ((Man-notify-method 'pushy))(man \"$3\")))"
+					expression="(progn (require 'man)(let ((Man-notify-method 'pushy))(man \"$3\")))"
 					emacsclient.sh -e "$expression" || man "$3"
 				else
-					command tldr --platform "$2" "$3" | less
+					expression="(progn (require 'tldr)(tldr \"$3\"))"
+					emacsclient.sh -e "$expression" || command tldr --platform "$2" "$3" | less
 				fi
 			fi
 			;;
@@ -89,7 +91,7 @@ function display_topic(){
 				#shellcheck disable=SC2154
 				man "$section" "$topic";
 			else
-				local expression="(progn (require 'man)(let ((Man-notify-method 'pushy))(man \"$section $topic\")))"
+				expression="(progn (require 'man)(let ((Man-notify-method 'pushy))(man \"$section $topic\")))"
 				emacsclient.sh -e "$expression" || pinfo -a "$topic.$section";
 			fi
 			;;
@@ -99,7 +101,7 @@ function display_topic(){
 			if [ "$4" == preview ] ; then
 				info "$topic"
 			else
-				local expression="(info \"$topic\")"
+				expression="(info \"$topic\")"
 				emacsclient.sh -e "$expression" || pinfo "$topic"
 			fi
 			;;
